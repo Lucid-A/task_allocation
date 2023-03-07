@@ -1,14 +1,15 @@
+import os
 import math
+import time
 import random
 import numpy as np
+import Astar_Cost as C
 
-
-# 计算两点间距离
+# 计算两点间欧式距离
 def distance(point1, point2):
     return math.sqrt((point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2)
 
-
-# 计算距离矩阵
+# 计算欧式距离矩阵
 def distance_matrix(points):
     num = len(points)
     distance_matrix = np.zeros([num, num])
@@ -17,18 +18,51 @@ def distance_matrix(points):
             distance_matrix[i][j] = distance(points[i], points[j])
     return distance_matrix
 
+# A*算法求代价的前期准备
+def prepare_astar(pgm_path = "./xunjian_new.pgm", map_path = "final_map.npy"):
+    if not os.path.exists(map_path):
+        MY_MAP = C.Progress_Pgm(pgm_path)
+        MY_MAP.convert_pgm()
+        MY_MAP.map_process(6)
+        # MY_MAP.print_map()
+        MY_MAP.show_final_map()
+        my_map = MY_MAP.map
+    else:
+        my_map = np.load(map_path)
+    astar = C.Astar(1 - my_map)
+    return astar # 返回一个astar类
+
+# 计算astar距离矩阵
+def distance_astar_matrix(points):
+    num = len(points)
+    points = C.xy_transation(points)
+    distance_matrix = np.zeros([num, num])
+    for i in range(num):
+        for j in range(num):
+            if j >= i:
+                if points[i][0] == points[j][0] and points[i][1] == points[j][1]:
+                    distance_matrix[i][j] = 0
+                else:
+                    astar = prepare_astar()
+                    astar.set_start(points[i][0], points[i][1])
+                    astar.set_target(points[j][0], points[j][1])
+                    astar.calculate()
+                    distance_matrix[i][j] = astar.realcost
+            else:
+                distance_matrix[i][j] = distance_matrix[j][i]
+    return distance_matrix
+
 # SA分配算法
 class SA():
     def __init__(self, strategy='MIN_DISTANCE'):
         self.iters = 50     # 每轮温度迭代次数
-        self.decay = 0.99   # 退火系数
+        self.decay = 0.998  # 退火系数
         self.temp     = 100 # 起始温度
         self.temp_end = 10  # 终止温度
-        
         # 最优策略："MIN_TIME" or "MIN_DISTANCE"
-        self.strategy = strategy  
+        self.strategy = strategy
 
-    #初始化解
+    # 初始化解
     def init_solution(self, point_index, robotnum, robot_status):
         initial_solution = point_index[:]
         random.shuffle(initial_solution)
@@ -57,18 +91,46 @@ class SA():
         split_index = [i for i in range(len(solution)) if solution[i] == -1]
         split_index.insert(0, -1)
         split_index.append(len(solution))
-        
         routes = []
-        for i in range(0,robotnum):
+        for i in range(0, robotnum):
             route = solution[split_index[i]+1 : split_index[i+1]]
             routes.append(route)
         return routes
+
+    def calculate_astar_cost(self, robot_num, robot_location, task_location, solution):
+        costs = 0
+        cost_list = []
+        routes = self.split_route(robot_num, solution)
+        
+        # 总距离最短策略
+        if "MIN_DISTANCE" == self.strategy:
+            for i in range(0, robot_num):
+                cost = 0
+                route = routes[i]
+                if len(route) > 0:
+                    cost += self.D_A[i][route[0]+robot_num]
+                    for j in range(0, len(route) - 1):
+                        cost += self.D_A[route[j]+robot_num][route[j+1]+robot_num]
+                cost_list.append(cost)
+            costs = sum(cost_list)
+        # 总时间最短策略
+        elif "MIN_TIME" == self.strategy:
+            for i in range(0, robot_num):
+                cost = 0
+                route = routes[i]
+                if len(route) > 1:
+                    cost += self.D_A[i][route[0]+robot_num]
+                    for j in range(0, len(route) - 1):
+                        cost += self.D_A[route[j] + robot_num][route[j + 1] + robot_num]
+                cost_list.append(cost)
+            costs = max(cost_list) + 0.1 * sum(cost_list)
+        return costs
 
     def calculate_cost(self, robot_num, robot_location, task_location, solution):
         costs = 0
         cost_list = []
         routes = self.split_route(robot_num, solution)
-
+        
         # 总距离最短策略
         if "MIN_DISTANCE" == self.strategy:
             for i in range(0, robot_num):
@@ -76,10 +138,10 @@ class SA():
                 route = routes[i]
                 if len(route) > 0:
                     cost += distance(robot_location[i], task_location[route[0]])
-                    for j in range(0,len(route)-1):
+                    for j in range(0, len(route)-1):
                         cost += distance(task_location[route[j]], task_location[route[j+1]])
                 cost_list.append(cost)
-            costs = sum(cost_list)
+            costs=sum(cost_list)
         # 总时间最短策略
         elif "MIN_TIME" == self.strategy:
             for i in range(0, robot_num):
@@ -91,10 +153,9 @@ class SA():
                         cost += distance(task_location[route[j]], task_location[route[j+1]])
                 cost_list.append(cost)
             costs = max(cost_list) + 0.1 * sum(cost_list)
-        
         return costs
 
-    #生成新解
+    # 生成新解
     def new_solution(self, old):
         p = random.random()
         # 交换法
@@ -106,6 +167,7 @@ class SA():
             new = old[:]
             swap = old[pos1], old[pos2]
             new[pos2], new[pos1] = swap
+
         # 移位法
         elif p < 0.66:
             while True:
@@ -124,8 +186,8 @@ class SA():
         # 倒置法
         else:
             while True:
-                pos1,pos2 = np.random.randint(0, len(old) - 1, size=2).tolist()
-                if pos2 - pos1 >=1:
+                pos1, pos2 = np.random.randint(0, len(old) - 1, size=2).tolist()
+                if pos2 - pos1 >= 1:
                     break
             a=old[:pos1]
             b=old[pos1 : pos2+1][::-1]
@@ -134,19 +196,22 @@ class SA():
         return new
 
     def solve(self, point_index, robot_location, task1_location, task2_location, robot_status):
-        robot_num = len(robot_location)
-        D = distance_matrix(robot_location + task1_location + task2_location)
-        init_solution = self.init_solution(point_index, robot_num, robot_status)
+        self.D = distance_matrix(robot_location + task1_location + task2_location)
         
+        starttime = time.time()
+        self.D_A = distance_astar_matrix(robot_location + task1_location + task2_location)
+        print("cost_matrix time: ",time.time()-starttime)
+        
+        robot_num = len(robot_location)
+        init_solution = self.init_solution(point_index, robot_num, robot_status)
         while not self.verify_solution(robot_num, robot_status, len(task1_location), len(task2_location), init_solution):
             init_solution = self.init_solution(point_index, robot_num, robot_status)
         init_cost = self.calculate_cost(robot_num, robot_location, task1_location + task2_location, init_solution)
-        
-        print('initial_solution = ', init_solution)
-        print('initial_cost = ',init_cost)
-        
-        best_cost = init_cost
+        init_cost = self.calculate_astar_cost(robot_num, robot_location, task1_location+task2_location, init_solution)
+        print('initial_solution=', init_solution)
+        print('initial_cost=', init_cost)
         best_solution = init_solution[:]
+        best_cost = init_cost
         current_solution = init_solution[:]
         current_cost = init_cost
 
@@ -155,10 +220,10 @@ class SA():
         while self.temp > self.temp_end:
             for i in range(self.iters):
                 new_solution = self.new_solution(current_solution)
-                while self.verify_solution(robot_num, robot_status, len(task1_location), len(task2_location),
-                                           new_solution) == False:
+                while not self.verify_solution(robot_num, robot_status, len(task1_location), len(task2_location), new_solution):
                     new_solution = self.new_solution(current_solution)
                 new_cost = self.calculate_cost(robot_num, robot_location, task1_location + task2_location, new_solution)
+                new_cost = self.calculate_astar_cost(robot_num, robot_location, task1_location + task2_location, new_solution)
                 if new_cost < current_cost
                    or np.exp(-1 * np.abs(new_cost - current_cost) / self.temp) >= np.random.rand():
                     current_cost = new_cost
