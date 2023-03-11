@@ -1,0 +1,8 @@
+# binary files
+exec/*
+temp/*
+
+# keep empty dir
+!exec/.gitkeep
+!temp/.gitkeep
+
