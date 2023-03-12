@@ -56,7 +56,7 @@ class Progress_Pgm(object):
         # 遍历地图矩阵
         for x in range(self.map.shape[0]):
             for y in range(self.map.shape[1]):
-                if x < 10 or x > self.height-10 or
+                if x < 10 or x > self.height-10 or \
                    y < 10 or y > self.width-10: # 边缘置0
                     self.map[x][y] = 0
                 if self.map[x][y] == 1:
@@ -234,30 +234,30 @@ class Astar(object):
         plt.title(title)
         plt.show()
 #
-# if __name__ == "__main__":
-    # path = "./xunjian_new.pgm"
-    # # if 1:
-    # if not os.path.exists("final_map.npy"):
-    #     MY_MAP = Progress_Pgm(path)
-    #     MY_MAP.convert_pgm()
-    #     MY_MAP.map_process(6)
-    #     # MY_MAP.print_map()
-    #     MY_MAP.show_final_map()
-    #     my_map = MY_MAP.map
-    # else:
-    #     my_map = np.load('final_map.npy')
-    #     my_map[94,112]= 0
-    #     img = Image.fromarray(my_map*255)
-    #     img.show()
-    # print("ok")
-    # #
-    # #生成算法实例对象
-    # k=Astar(1-my_map)
-    # #设置路径起点
-    # k.set_start(20,90)
-    # #设置目标终点
-    # k.set_target(90,20)#设置终点为右下角
-    # #计算路径
-    # k.calculate()
-    # #矩阵绘制显示
-    # k.show_mat('Path Output,STEPS='+str(k.steps)+',COST='+str(round(k.realcost,3))+',Time cost='+str(round((k.end-k.start),3))+'s')
+if __name__ == "__main__":
+    path = "./xunjian_new.pgm"
+    # if 1:
+    if not os.path.exists("final_map.npy"):
+        MY_MAP = Progress_Pgm(path)
+        MY_MAP.convert_pgm()
+        MY_MAP.map_process(6)
+        # MY_MAP.print_map()
+        MY_MAP.show_final_map()
+        my_map = MY_MAP.map
+    else:
+        my_map = np.load('final_map.npy')
+        my_map[94,112]= 0
+        img = Image.fromarray(my_map*255)
+        img.show()
+    print("ok")
+    #
+    #生成算法实例对象
+    k=Astar(1-my_map)
+    #设置路径起点
+    k.set_start(20,90)
+    #设置目标终点
+    k.set_target(90,20)#设置终点为右下角
+    #计算路径
+    k.calculate()
+    #矩阵绘制显示
+    k.show_mat('Path Output,STEPS='+str(k.steps)+',COST='+str(round(k.realcost,3))+',Time cost='+str(round((k.end-k.start),3))+'s')

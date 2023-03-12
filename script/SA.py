@@ -224,7 +224,7 @@ class SA():
                     new_solution = self.new_solution(current_solution)
                 new_cost = self.calculate_cost(robot_num, robot_location, task1_location + task2_location, new_solution)
                 new_cost = self.calculate_astar_cost(robot_num, robot_location, task1_location + task2_location, new_solution)
-                if new_cost < current_cost
+                if new_cost < current_cost \
                    or np.exp(-1 * np.abs(new_cost - current_cost) / self.temp) >= np.random.rand():
                     current_cost = new_cost
                     current_solution = new_solution[:]
