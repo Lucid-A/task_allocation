@@ -4,11 +4,14 @@ project(task_allocation)
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++17)
 
+find_package(OpenCV 4.2.0 REQUIRED)
+
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   roscpp
+  cv_bridge
   std_msgs
   geometry_msgs
   message_generation
@@ -140,8 +143,15 @@ include_directories(
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/task_allocation_node.cpp)
 
+add_library(ASTAR src/astar.cpp)
+add_library(SA src/SA.cpp)
+add_library(TA src/task_allocation.cpp)
+
 add_executable(test_topic src/test_topic.cpp)
 target_link_libraries(test_topic ${catkin_LIBRARIES})
+
+add_executable(task_allocation_srv src/task_allocation_srv.cpp)
+target_link_libraries(task_allocation_srv ${catkin_LIBRARIES} ${OpenCV_LIBS} TA SA ASTAR)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
