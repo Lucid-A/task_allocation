@@ -77,8 +77,10 @@ void TAClient::status_callback(const std_msgs::Int64::ConstPtr &msg)
     this->srv_statusChange.request.car = this->car;
 
     if (this->cli_statusChange.call(this->srv_statusChange)) {
+        ROS_INFO("Get statusChange Response");
         this->task_list.clear();
         this->task_list = this->srv_statusChange.response.task_list;
+        ROS_INFO("Task list size: %d", this->task_list.size());
         if (this->task_list.size() > 0)
         {
             geometry_msgs::PoseStamped ps;
