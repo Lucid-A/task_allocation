@@ -16,8 +16,8 @@ TAClient::TAClient() : loop_rate(10)
     this->sub_pose = nh.subscribe("/robot_pose_ekf/odom_combined", 1000, &TAClient::pose_callback, this);
     this->sub_task = nh.subscribe("/task_result/ocr", 1000, &TAClient::task_callback, this);
 
-    this->cli_statusChange = nh.serviceClient<task_allocation::statusChange>("Status change");
-    this->cli_taskFinished = nh.serviceClient<task_allocation::taskFinished>("Task finished");
+    this->cli_statusChange = nh.serviceClient<task_allocation::statusChange>("statusChange");
+    this->cli_taskFinished = nh.serviceClient<task_allocation::taskFinished>("taskFinished");
 
     this->car.id = 1;
     this->car.sensor_status = {true, true};
@@ -33,14 +33,14 @@ void TAClient::task_callback(const std_msgs::String::ConstPtr &msg)
 {
     string result(msg->data);
     
-    srv_taskFinished.request.car = this->car;
-    srv_taskFinished.request.finished_task = this->task_list.at(0);
-    srv_taskFinished.request.result.data = result;
+    this->srv_taskFinished.request.car = this->car;
+    this->srv_taskFinished.request.finished_task = this->task_list.at(0);
+    this->srv_taskFinished.request.result.data = result;
 
-    if (cli_taskFinished.call(srv_taskFinished))
+    if (cli_taskFinished.call(this->srv_taskFinished))
     {
         this->task_list.clear();
-        this->task_list = srv_taskFinished.response.task_list;
+        this->task_list = this->srv_taskFinished.response.task_list;
         if (this->task_list.size() > 0)
         {
             geometry_msgs::PoseStamped ps;
