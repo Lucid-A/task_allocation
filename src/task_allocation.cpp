@@ -1,3 +1,4 @@
+#include <cmath>
 #include <iostream>
 
 #include "ros/ros.h"
@@ -27,9 +28,18 @@ bool TAServer::loadMap(string map_file) {
     cv::threshold(this->map, this->map, thresh, maxval, cv::THRESH_BINARY);
     cout << "threshold" << endl;
 
+    cv::namedWindow("map", cv::WINDOW_AUTOSIZE);
+    cv::imshow("map", this->map);
+    cv::waitKey(10000);
+
     // Make Obstacle White(255) and Road Black(0)
     cv::bitwise_not(this->map, this->map);
     cout << "not" << endl;
+
+    cout << "in func: " << &this->map << endl;
+    
+    cv::imwrite("/home/nx/Desktop/1.png", this->map);
+    cv::imshow("map", this->map);
 
     // Do obstacle expansion
     int dilation_size = 6;
@@ -39,7 +49,33 @@ bool TAServer::loadMap(string map_file) {
         cv::Point(dilation_size, dilation_size));
     cv::dilate(this->map, this->expanded, element, cv::Point(-1, -1), 1, cv::BORDER_REPLICATE);
     cout << "dilate" << endl;
+
+    cv::namedWindow("expand", cv::WINDOW_AUTOSIZE);
+    cv::imwrite("/home/nx/Desktop/2.png", this->expanded);
+    cv::imshow("expand", this->expanded);
+
+    cv::waitKey(0);
+
     return true;
+}
+
+int TAServer::loadTask(float x, float y, float dir_x, float dir_y, int type) {
+    int task_id = this->task_list.size();
+
+    task_allocation::Task task;
+    task.id = task_id,
+    task.type = type,
+    task.pose.position.x = x,
+    task.pose.position.y = y,
+    task.pose.position.z = 0,
+    task.pose.orientation.w = cos(atan2(dir_y, dir_x) / 2),
+    task.pose.orientation.x = 0,
+    task.pose.orientation.y = 0,
+    task.pose.orientation.z = sin(atan2(dir_y, dir_x) / 2);
+
+    this->task_list.push_back(task);
+
+    return task_id;
 }
 
 cv::Mat TAServer::calculateCostMap()
@@ -216,13 +252,13 @@ bool TAServer::taskFinished(
 
 TAClient::TAClient() : loop_rate(10)
 {
-    this->pub_goal = nh.advertise<geometry_msgs::PoseStamped>("my_goal", 1000);
+    this->pub_goal = nh.advertise<geometry_msgs::PoseStamped>("/my_goal", 1000);
     this->sub_status = nh.subscribe("status", 1000, &TAClient::status_callback, this);
-    this->sub_pose = nh.subscribe("robot_pose", 1000, &TAClient::pose_callback, this);
-    this->sub_task = nh.subscribe("task_result", 1000, &TAClient::task_callback, this);
+    this->sub_pose = nh.subscribe("/robot_pose_ekf/odom_combined", 1000, &TAClient::pose_callback, this);
+    this->sub_task = nh.subscribe("/task_result/ocr", 1000, &TAClient::task_callback, this);
 
     this->cli_statusChange = nh.serviceClient<task_allocation::statusChange>("Status change");
-    cli_taskFinished = nh.serviceClient<task_allocation::taskFinished>("Task finished");
+    this->cli_taskFinished = nh.serviceClient<task_allocation::taskFinished>("Task finished");
 
     this->car.id = 1;
     this->car.sensor_status = {true, true};

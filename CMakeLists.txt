@@ -2,9 +2,10 @@ cmake_minimum_required(VERSION 3.0.2)
 project(task_allocation)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++17)
+add_compile_options(-std=c++17)
+add_compile_options(-g)
 
-find_package(OpenCV 4.2.0 REQUIRED)
+find_package(OpenCV 4.5.4 REQUIRED)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -151,7 +152,10 @@ add_executable(test_topic src/test_topic.cpp)
 target_link_libraries(test_topic ${catkin_LIBRARIES})
 
 add_executable(task_allocation_srv src/task_allocation_srv.cpp)
-target_link_libraries(task_allocation_srv ${catkin_LIBRARIES} ${OpenCV_LIBS} TA SA ASTAR)
+target_link_libraries(task_allocation_srv ${catkin_LIBRARIES} TA ${OpenCV_LIBS} SA ASTAR)
+
+add_executable(task_allocation_cli src/task_allocation_cli.cpp)
+target_link_libraries(task_allocation_cli ${catkin_LIBRARIES} TA ${OpenCV_LIBS} SA ASTAR)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the

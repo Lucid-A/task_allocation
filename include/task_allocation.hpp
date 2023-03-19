@@ -55,7 +55,8 @@ public:
     virtual float CalculateCostBetween2Points(float start_x, float start_y, float end_x, float end_y);
 
     bool loadMap(std::string map_file);
-    bool loadTasks();
+    int loadTask(float x, float y, float dir_x, float dir_y, int type);
+
     cv::Mat calculateCostMap();
 
     bool registerCar(
