@@ -97,5 +97,5 @@ void TAClient::status_callback(const std_msgs::Int64::ConstPtr &msg)
 
 void TAClient::pose_callback(const geometry_msgs::PoseStamped::ConstPtr &msg) {
     this->car.pose = msg->pose;
-    ROS_INFO("Get robot pose: (%.6f, %.6f) dir: %.0f", msg->pose.position.x, msg->pose.position.y, acos(msg->pose.orientation.w) / 3.14 * 180);
+//    ROS_INFO("Get robot pose: (%.6f, %.6f) dir: %.0f", msg->pose.position.x, msg->pose.position.y, acos(msg->pose.orientation.w) / 3.14 * 180);
 }
