@@ -14,6 +14,10 @@ float TAServer::CalculateCostBetween2Points(float start_x, float start_y, float 
     return CalculateA(this->expanded, start_x, start_y, end_x, end_y);
 }
 
+void TAServer::spin() {
+    ros::spin();
+}
+
 bool TAServer::loadMap(string map_file) {
     this->map = cv::imread(map_file, cv::IMREAD_GRAYSCALE);
 
@@ -30,7 +34,7 @@ bool TAServer::loadMap(string map_file) {
 
     cv::namedWindow("map", cv::WINDOW_AUTOSIZE);
     cv::imshow("map", this->map);
-    cv::waitKey(10000);
+    cv::waitKey(1000);
 
     // Make Obstacle White(255) and Road Black(0)
     cv::bitwise_not(this->map, this->map);
@@ -54,7 +58,7 @@ bool TAServer::loadMap(string map_file) {
     cv::imwrite("/home/nx/Desktop/2.png", this->expanded);
     cv::imshow("expand", this->expanded);
 
-    cv::waitKey(0);
+    cv::waitKey(1000);
 
     return true;
 }
@@ -120,7 +124,6 @@ TAServer::TAServer() : loop_rate(10) {
     this->srv_statusChange = nh.advertiseService("statusChange", &TAServer::statusChange, this);
     this->srv_taskFinished = nh.advertiseService("taskFinished", &TAServer::taskFinished, this);
     ROS_INFO("Services statred!");
-    ros::spin();
 }
 
 TAServer::~TAServer()

@@ -52,6 +52,7 @@ int main(int argc, char *argv[], char *env[])
     }
 
     cout << "out of func: " << &srv.map << endl;
+    ros::spin();
 
     return 0;
 }

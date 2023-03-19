@@ -54,6 +54,7 @@ public:
 
     virtual float CalculateCostBetween2Points(float start_x, float start_y, float end_x, float end_y);
 
+    void spin();
     bool loadMap(std::string map_file);
     int loadTask(float x, float y, float dir_x, float dir_y, int type);
 
@@ -97,6 +98,8 @@ public:
 public:
     TAClient();
     ~TAClient();
+
+    void spin();
 
     void status_callback(const std_msgs::Int64::ConstPtr& msg);
     void pose_callback(const geometry_msgs::PoseStamped::ConstPtr &msg);

@@ -8,5 +8,6 @@ using namespace std;
 int main(int argc, char* argv[], char* env[]) {
     ros::init(argc, argv, "TAClient");
     TAClient cli;
+    ros::spin();
     return 0;
 }
