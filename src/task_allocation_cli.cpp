@@ -23,8 +23,8 @@ TAClient::TAClient() : loop_rate(10)
     this->cli_statusChange = nh.serviceClient<task_allocation::statusChange>("statusChange");
     this->cli_taskFinished = nh.serviceClient<task_allocation::taskFinished>("taskFinished");
 
-    boost::shared_ptr<std_msgs::String const> sharedPtr;
-    sharedPtr = ros::topic::waitForMessage<nav_msgs::PoseStamped>("/pose/robot_pose_ekf", nh);
+    boost::shared_ptr<geometry_msgs::PoseStamped const> sharedPtr;
+    sharedPtr = ros::topic::waitForMessage<geometry_msgs::PoseStamped>("/pose/robot_pose_ekf", nh);
 
     this->car.id = 1;
     this->car.sensor_status = {true, true};
@@ -45,7 +45,7 @@ void TAClient::task_callback(const std_msgs::String::ConstPtr &msg)
     this->srv_taskFinished.request.finished_task = this->task_list.at(0);
     this->srv_taskFinished.request.result.data = result;
 
-    ROS_INFO("Task finished, result: %s", result);
+    ROS_INFO("Task finished, result: %s", result.c_str());
 
     if (cli_taskFinished.call(this->srv_taskFinished))
     {
