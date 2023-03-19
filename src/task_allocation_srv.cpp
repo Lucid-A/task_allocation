@@ -158,6 +158,7 @@ bool TAServer::statusChange(
     task_allocation::statusChange::Request &req,
     task_allocation::statusChange::Response &res)
     {
+        ROS_INFO("Get statusChange Request from car %d", req.car.id);
         int car_index;
         task_allocation::Car &car = req.car;
         //map<int, int>::const_iterator ret = this->car_id2index.find(car.id);
