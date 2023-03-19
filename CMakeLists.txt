@@ -146,16 +146,17 @@ include_directories(
 
 add_library(ASTAR src/astar.cpp)
 add_library(SA src/SA.cpp)
-add_library(TA src/task_allocation.cpp)
+add_library(TASERVER src/task_allocation_srv.cpp)
+add_library(TACLIENT src/task_allocation_cli.cpp)
 
 add_executable(test_topic src/test_topic.cpp)
 target_link_libraries(test_topic ${catkin_LIBRARIES})
 
-add_executable(task_allocation_srv src/task_allocation_srv.cpp)
-target_link_libraries(task_allocation_srv ${catkin_LIBRARIES} TA ${OpenCV_LIBS} SA ASTAR)
+add_executable(test_server src/test_server.cpp)
+target_link_libraries(test_server ${catkin_LIBRARIES} TASERVER TACLIENT ${OpenCV_LIBS} SA ASTAR)
 
-add_executable(task_allocation_cli src/task_allocation_cli.cpp)
-target_link_libraries(task_allocation_cli ${catkin_LIBRARIES} TA ${OpenCV_LIBS} SA ASTAR)
+add_executable(test_client src/test_client.cpp)
+target_link_libraries(test_client ${catkin_LIBRARIES} TASERVER TACLIENT ${OpenCV_LIBS} SA ASTAR)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
