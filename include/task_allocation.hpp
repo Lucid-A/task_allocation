@@ -9,10 +9,11 @@
 #include "std_msgs/Int64.h"
 #include "std_msgs/String.h"
 #include "geometry_msgs/PoseStamped.h"
-//#include "move_base_msgs/MoveBaseActionGoal.h"
 
 #include "task_allocation/Car.h"
 #include "task_allocation/Task.h"
+#include "task_allocation/StringStamped.h"
+
 #include "task_allocation/registerCar.h"
 #include "task_allocation/statusChange.h"
 #include "task_allocation/taskFinished.h"
@@ -34,9 +35,10 @@ public:
     std::map<int, int> car_id2index;
     std::map<int, int> task_id2index;
     
+    // TODO: Make index temporarily in func, use id in class member
     // use index
     std::vector<task_allocation::Car> car_list;
-    std::vector<task_allocation::Task> task_list;
+    std::vector<task_allocation::Task> task_list; // id
 
     // index -> id
     std::vector<int> tasks_to_be_done;
@@ -81,6 +83,7 @@ public:
     ros::Rate loop_rate;
 
     ros::Publisher pub_goal;
+    ros::Publisher pub_task;
 
     ros::Subscriber sub_pose;
     ros::Subscriber sub_task;

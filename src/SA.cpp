@@ -1,12 +1,15 @@
 #include "SA.hpp"
 using namespace std;
 
-void SA::Fisher_yates_Shuffle(std::vector<int>& arr, std::vector<int>& res) {
-    uniform_int_distribution<> dis(0, arr.size() - 1);
-
-    for (int i = 0; i < arr.size(); ++i) {
+void SA::Fisher_yates_Shuffle(std::vector<int> arr, std::vector<int>& res) {
+    cout << "Shuffle" << endl;
+    int size = arr.size();
+    for (int i = 0; i < size; ++i) {
+        uniform_int_distribution<> dis(0, arr.size() - 1);
+        cout << "size: " << arr.size();
         int rand_index = dis(this->gen);
-        res.push_back(arr[rand_index]);
+        cout << " random index: " << rand_index << endl;
+        res.push_back(arr.at(rand_index));
         arr.erase(arr.begin() + rand_index);
     }
 }
@@ -14,8 +17,8 @@ void SA::Fisher_yates_Shuffle(std::vector<int>& arr, std::vector<int>& res) {
 void SA::Knuth_Durstenfeld_Shuffle(std::vector<int>& arr) {
     uniform_int_distribution<> dis(0, arr.size() - 1);
 
-    for (int i = arr.size() - 1; i >= 0; --i) {
-        uniform_int_distribution<> dis(0, i + 1);
+    for (int i = arr.size() - 1; i > 0; --i) {
+        uniform_int_distribution<> dis(0, i);
         std::swap(arr[dis(this->gen)], arr[i]);
     }
 }
@@ -56,6 +59,7 @@ void SA::InitSA(const cv::Mat &cost_map) {
     this->carNum = s.height - this->taskNum;
 
     this->costs = cost_map.clone();
+    cout << "taskNum = " << this->costs.size().width << "carNum = " << this->costs.size().height << endl;
 }
 
 // 开始模拟退火
@@ -64,6 +68,7 @@ void SA::StartSA()
     int rectify_flag = 0; // 防止丢失最优解标志
     vector<int> init_path;
 
+    cout << "Start SA" << endl;
     // 找到一条满足约束条件的初始路径
     float init_cost = this->InitPath(init_path);
     
@@ -71,6 +76,7 @@ void SA::StartSA()
         cout << "No suitable path in this condition!" << endl;
         return;
     }
+    cout << "Init Path" << endl;
 
     best_cost = init_cost;
     float current_cost = init_cost;
@@ -88,7 +94,7 @@ void SA::StartSA()
                 cout << "No suitable new path in this condition!" << endl;
                 return;
             }
-
+            // cout << "New Path" << endl;
             // 根据Metropolis准则计算一个概率更新解
             float p_update = this->P();
 
@@ -124,12 +130,19 @@ void SA::StartSA()
 float SA::InitPath(vector<int> &init_path)
 {
     int taskNum = this->costs.size().width;
-    int nodeNum = this->costs.size().height;
+    int nodeNum = this->costs.size().height - 1;
     vector<int> task_index(nodeNum, -1);
-    for (int i = 0; i < nodeNum; ++i)
+    for (int i = 0; i < taskNum; ++i)
     {
         task_index.at(i) = i;
     }
+
+    cout << "task_index: " << task_index.at(0);
+    for (int i = 1; i < task_index.size(); ++i)
+    {
+        cout << " -> " << task_index.at(i);
+    }
+    cout << endl;
 
     int break_cnt = 0;
     float total_cost = -1.0f;
@@ -140,9 +153,18 @@ float SA::InitPath(vector<int> &init_path)
         init_path = this->task_index;
         Knuth_Durstenfeld_Shuffle(init_path);
 #endif
+        cout << "Init" << endl;
         total_cost = this->CalculateCost(init_path);
     }
-    while (total_cost < 0.0f || break_cnt++ < 100);
+    while (total_cost < 0.0f && break_cnt++ < 100);
+
+    cout << "Init Path: " << init_path.at(0);
+    for (int i = 1; i < init_path.size(); ++i)
+    {
+        cout << " -> " << init_path.at(i);
+    }
+    cout << endl;
+
     return total_cost;
 }
 
@@ -151,7 +173,7 @@ float SA::NewPath(vector<int> old_path, vector<int>&new_path)
 {
     new_path.clear();
 
-    uniform_int_distribution<> dis(0, old_path.size());
+    uniform_int_distribution<> dis(0, old_path.size() - 1);
 
     int break_cnt = 0;
     float total_cost = -1.0f;
@@ -175,6 +197,7 @@ float SA::NewPath(vector<int> old_path, vector<int>&new_path)
         }
         else if (p < 0.5)
         {
+            // cout << 0.5 << endl;
             // 0.25的概率移位法: ABCD -> ACBD
             new_path.insert(new_path.end(), old_path.begin(), old_path.begin() + idx[0]);
             new_path.insert(new_path.end(), old_path.begin() + idx[1], old_path.begin() + idx[2]);
@@ -183,6 +206,7 @@ float SA::NewPath(vector<int> old_path, vector<int>&new_path)
         }
         else if (p < 0.75)
         {
+            // cout << 0.75 << endl;
             // 0.25的概率移位法: ABCD -> ACBD
             new_path.insert(new_path.end(), old_path.begin(), old_path.begin() + idx[0]);
             new_path.insert(new_path.end(), old_path.begin() + idx[1] + 1, old_path.begin() + idx[2] + 1);
@@ -191,18 +215,20 @@ float SA::NewPath(vector<int> old_path, vector<int>&new_path)
         }
         else
         {
+            // cout << 1 << endl;
             // 0.25的概率倒置法: Abcd...wxyZ -> Ayxw...dcbZ
             reverse(old_path.begin() + id1, old_path.begin() + id2);
             new_path = old_path;
         }
         total_cost = this->CalculateCost(new_path);
-    } while (total_cost < 0.0f || break_cnt++ < 100);
+    } while (total_cost < 0.0f && break_cnt++ < 100);
     return total_cost;
 }
 
 // 分割路径
 void SA::SplitPath(std::vector<int> &path) 
 {
+    // cout << "Split Path" << endl;
     this->splited_paths.clear();
     // 找到分割点
     vector<int>::iterator beg = path.begin();

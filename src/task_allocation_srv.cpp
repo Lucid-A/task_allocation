@@ -32,18 +32,18 @@ bool TAServer::loadMap(string map_file) {
     cv::threshold(this->map, this->map, thresh, maxval, cv::THRESH_BINARY);
     cout << "threshold" << endl;
 
-    cv::namedWindow("map", cv::WINDOW_AUTOSIZE);
-    cv::imshow("map", this->map);
-    cv::waitKey(1000);
+    // cv::namedWindow("map", cv::WINDOW_AUTOSIZE);
+    // cv::imshow("map", this->map);
+    // cv::waitKey(1000);
 
     // Make Obstacle White(255) and Road Black(0)
     cv::bitwise_not(this->map, this->map);
     cout << "not" << endl;
 
-    cout << "in func: " << &this->map << endl;
+    // cout << "in func: " << &this->map << endl;
     
-    cv::imwrite("/home/nx/Desktop/1.png", this->map);
-    cv::imshow("map", this->map);
+    // cv::imwrite("/home/nx/Desktop/1.png", this->map);
+    // cv::imshow("map", this->map);
 
     // Do obstacle expansion
     int dilation_size = 6;
@@ -54,11 +54,11 @@ bool TAServer::loadMap(string map_file) {
     cv::dilate(this->map, this->expanded, element, cv::Point(-1, -1), 1, cv::BORDER_REPLICATE);
     cout << "dilate" << endl;
 
-    cv::namedWindow("expand", cv::WINDOW_AUTOSIZE);
-    cv::imwrite("/home/nx/Desktop/2.png", this->expanded);
-    cv::imshow("expand", this->expanded);
+    // cv::namedWindow("expand", cv::WINDOW_AUTOSIZE);
+    // cv::imwrite("/home/nx/Desktop/2.png", this->expanded);
+    // cv::imshow("expand", this->expanded);
 
-    cv::waitKey(1000);
+    // cv::waitKey(1000);
 
     return true;
 }
@@ -78,6 +78,7 @@ int TAServer::loadTask(float x, float y, float dir_x, float dir_y, int type) {
     task.pose.orientation.z = sin(atan2(dir_y, dir_x) / 2);
 
     this->task_list.push_back(task);
+    this->tasks_to_be_done.push_back(task_id);
 
     return task_id;
 }
@@ -86,6 +87,8 @@ cv::Mat TAServer::calculateCostMap()
 {
     int taskNum = this->tasks_to_be_done.size();
     int carNum = this->car_list.size();
+
+    ROS_INFO("Task num: %d, Carnum: %d", taskNum, carNum);
 
     cv::Mat cost_map(taskNum + carNum, taskNum, CV_32FC1);
 
@@ -101,9 +104,11 @@ cv::Mat TAServer::calculateCostMap()
         }
     }
 
+    ROS_INFO("task");
+
     for (int i = taskNum; i < taskNum + carNum; ++i)
     {
-        task_allocation::Car &car = car_list.at(i);
+        task_allocation::Car &car = car_list.at(i - taskNum);
         for (int j = 0; j < taskNum; ++j)
         {
             task_allocation::Task& task = task_list.at(j);
@@ -116,6 +121,10 @@ cv::Mat TAServer::calculateCostMap()
             }
         }
     }
+
+    ROS_INFO("Costmap\n");
+    cout << cost_map << endl;
+
     return cost_map;
 }
 
@@ -166,16 +175,6 @@ bool TAServer::statusChange(
 
         if (ret != this->car_id2index.end())
         {
-            car_index = car_list.size() - 1;
-            car_list.push_back(car);
-            this->car_id2index[car.id] = car_list.size();
-
-            ROS_INFO("Register new car[%d] id: %d", car_index, car.id);
-            ROS_INFO("Status:");
-            cout << car << endl;
-        }
-        else
-        {
             car_index = (*ret).second;
             task_allocation::Car &c = this->car_list.at(car_index);
             ROS_INFO("Update Car[%d] id: %d status:", car_index, car.id);
@@ -185,18 +184,32 @@ bool TAServer::statusChange(
             cout << car << endl;
             this->car_list.at(car_index) = car;
         }
+        else
+        {
+            car_index = car_list.size();
+            this->car_id2index[car.id] = car_index;
+            car_list.push_back(car);
 
+            ROS_INFO("Register new car[%d] id: %d", car_index, car.id);
+            ROS_INFO("Status:");
+            cout << car << endl;
+        }
+
+        ROS_INFO("Init SA");
         this->sa.InitSA(this->calculateCostMap());
+        ROS_INFO("Start SA");
         this->sa.StartSA();
 
         for (auto &t : this->sa.splited_paths.at(car_index))
         {
-            res.task_list.push_back(task_list.at(t));
+            int task_id = tasks_to_be_done.at(t);
+            res.task_list.push_back(this->task_list.at(task_id));
         }
 
-        int task_index = this->sa.splited_paths.at(car_index).at(0);
-        tasks_assigned.insert(make_pair(task_list.at(task_index).id, car.id));
-        tasks_to_be_done.erase(tasks_to_be_done.begin() + task_index);
+        int first_task_index = this->sa.splited_paths.at(car_index).at(0);
+        int first_task_id = this->tasks_to_be_done.at(first_task_index);
+        tasks_assigned.insert(make_pair(first_task_id, car.id));
+        tasks_to_be_done.erase(tasks_to_be_done.begin() + first_task_index);
 
         return true;
     }
@@ -212,9 +225,9 @@ bool TAServer::taskFinished(
 
         task_allocation::Task &task = req.finished_task;
 
-        if (ret != this->car_id2index.end())
+        if (ret == this->car_id2index.end())
         {
-            ROS_INFO("REJECTED: Unknown car id: %d finshed task%d %d", car.id, task.type, task.id);
+            ROS_INFO("REJECTED: Unknown car id: %d finshed task%c %d", car.id, char(task.type), task.id);
             return false;
         }
 
@@ -227,6 +240,28 @@ bool TAServer::taskFinished(
         cout << car << endl;
         this->car_list.at(car_index) = car;
 
+        ROS_INFO("Before task finished");
+        cout << "Tasks to be done: ";
+        for (int i = 0; i < this->tasks_to_be_done.size(); ++i) {
+            cout << this->tasks_to_be_done.at(i) << " ";
+        }
+        cout << endl;
+
+        cout << "Tasks assigned: ";
+        for (auto iter : this->tasks_assigned)
+        {
+            cout << "t:" << iter.first << " c:" << iter.second << " ";
+        }
+        cout << endl;
+
+        cout << "Tasks done: ";
+        for (auto iter : this->tasks_done)
+        {
+            cout << "t:" << iter.first << " r:" << iter.second << " ";
+        }
+        cout << endl;
+
+#if 0
         tasks_assigned.erase(task.id);
         string result = req.result.data;
         if (result.empty())
@@ -237,18 +272,82 @@ bool TAServer::taskFinished(
         {
             tasks_done.insert(make_pair(task.id, string(req.result.data)));
         }
+#else
+        static int task_id = 0;
+        task_allocation::Task &task_to_do = this->task_list.at(task_id);
+        task_id++;
+#endif
 
+#if 0
+        ROS_INFO("Before task reassigned");
+        cout << "Tasks to be done: ";
+        for (int i = 0; i < this->tasks_to_be_done.size(); ++i)
+        {
+            cout << this->tasks_to_be_done.at(i) << " ";
+        }
+        cout << endl;
+
+        cout << "Tasks assigned: ";
+        for (auto iter : this->tasks_assigned)
+        {
+            cout << "t:" << iter.first << " c:" << iter.second << " ";
+        }
+        cout << endl;
+
+        cout << "Tasks done: ";
+        for (auto iter : this->tasks_done)
+        {
+            cout << "t:" << iter.first << " r:" << iter.second << " ";
+        }
+        cout << endl;
+#endif
+
+#if 0
+        ROS_INFO("Task Init SA");
         this->sa.InitSA(this->calculateCostMap());
+        ROS_INFO("Task Start SA");
         this->sa.StartSA();
+        ROS_INFO("Task End SA");
 
         for (auto &t : this->sa.splited_paths.at(car_index))
         {
-            res.task_list.push_back(task_list.at(t));
+            int task_id = tasks_to_be_done.at(t);
+            res.task_list.push_back(this->task_list.at(task_id));
         }
 
-        int task_index = this->sa.splited_paths.at(car_index).at(0);
-        tasks_assigned.insert(make_pair(task_list.at(task_index).id, car.id));
-        tasks_to_be_done.erase(tasks_to_be_done.begin() + task_index);
+        int first_task_index = this->sa.splited_paths.at(car_index).at(0);
+        int first_task_id = this->tasks_to_be_done.at(first_task_index);
+        tasks_assigned.insert(make_pair(first_task_id, car.id));
+        tasks_to_be_done.erase(tasks_to_be_done.begin() + first_task_index);
+#else
+        for (int i = task_id; i < this->task_list.size(); ++i) {
+            res.task_list.push_back(task_to_do);
+        }
+#endif
+
+#if 0
+        ROS_INFO("After task assigned");
+        cout << "Tasks to be done: ";
+        for (int i = 0; i < this->tasks_to_be_done.size(); ++i)
+        {
+            cout << this->tasks_to_be_done.at(i) << " ";
+        }
+        cout << endl;
+
+        cout << "Tasks assigned: ";
+        for (auto iter : this->tasks_assigned)
+        {
+            cout << "t:" << iter.first << " c:" << iter.second << " ";
+        }
+        cout << endl;
+
+        cout << "Tasks done: ";
+        for (auto iter : this->tasks_done)
+        {
+            cout << "t:" << iter.first << " r:" << iter.second << " ";
+        }
+        cout << endl;
+#endif
 
         return true;
     }

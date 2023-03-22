@@ -56,6 +56,7 @@ add_message_files(
   FILES
   Car.msg
   Task.msg
+  StringStamped.msg
 )
 
 ## Generate services in the 'srv' folder

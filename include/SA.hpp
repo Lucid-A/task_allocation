@@ -59,6 +59,6 @@ public:
     // 计算分割好的路径的总代价
     float CalculateCost(std::vector<int> &path);
 
-    void Fisher_yates_Shuffle(std::vector<int> &arr, std::vector<int> &res);
+    void Fisher_yates_Shuffle(std::vector<int> arr, std::vector<int> &res);
     void Knuth_Durstenfeld_Shuffle(std::vector<int> &arr);
 };
